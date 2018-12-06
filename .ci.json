@@ -1,0 +1,9 @@
+{
+  "env": {
+    "resources": [
+    ]
+  },
+  "unittest": {
+    "command": "php vendor/bin/phpunit -c phpunit.xml --log-junit /reports/phpunit.xml"
+  }
+}

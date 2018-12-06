@@ -6,7 +6,11 @@
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require": {
-    "php": "^7.1"
+    "tutu-ru/lib-config": "^0.9.0",
+    "tutu-ru/lib-metrics": "^0.9.0",
+    "predis/predis": "v1.0.1",
+    "php": "^7.1",
+    "ext-mbstring": "*"
   },
   "require-dev": {
     "phpunit/phpunit": "^7.4",
