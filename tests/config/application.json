@@ -1,0 +1,35 @@
+{
+  "redis": {
+    "connections": {
+      "test-1": {
+        "host": "127.0.0.1",
+        "port": 6380
+      },
+      "test-2": {
+        "host": "127.0.0.1",
+        "port": 6381
+      },
+      "fail-1": {
+        "host": "127.0.0.1",
+        "port": 6383
+      },
+      "fail-2": {
+        "host": "deadport.phpunit.ci.tutu.ru",
+        "port": 5000,
+        "timeout": 3,
+        "read_write_timeout": 1
+      },
+      "fail-3": {
+        "host": "badport.phpunit.ci.tutu.ru",
+        "port": 5001,
+        "timeout": 1,
+        "read_write_timeout": 5,
+        "persistent": 1
+      },
+      "google": {
+        "host": "8.8.8.8",
+        "port": 6379
+      }
+    }
+  }
+}

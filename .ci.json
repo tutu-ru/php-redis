@@ -1,0 +1,10 @@
+{
+  "env": {
+    "resources": [
+      "custom_ports"
+    ]
+  },
+  "unittest": {
+    "command": "php vendor/bin/phpunit -c phpunit.xml --log-junit /reports/phpunit.xml"
+  }
+}

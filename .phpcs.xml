@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<ruleset name="TutuRu">
+    <description>A coding standard based on PSR2</description>
+
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <rule ref="PSR2" />
+    <rule ref="Generic.Arrays.DisallowLongArraySyntax.Found"/>
+</ruleset>
