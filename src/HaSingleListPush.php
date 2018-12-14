@@ -26,7 +26,7 @@ class HaSingleListPush implements MetricsAwareInterface
     private $currentConnectionName;
 
     /** @var string */
-    private $statsdPrefix;
+    private $storageType;
 
     /** @var int */
     private $retryTimeoutInSeconds = 3;
@@ -50,9 +50,9 @@ class HaSingleListPush implements MetricsAwareInterface
     }
 
 
-    public function setStatsdPrefix(string $prefix)
+    public function setStorageType(string $storageType)
     {
-        $this->statsdPrefix = $prefix;
+        $this->storageType = $storageType;
     }
 
 
@@ -80,7 +80,7 @@ class HaSingleListPush implements MetricsAwareInterface
         for ($i = 0; $i <= $tryCount; $i++) {
             if ($i > 0) {
                 $statsReconnect->registerReconnect();
-                if ($this->statsdPrefix && !is_null($this->metricsExporter)) {
+                if (!is_null($this->metricsExporter)) {
                     $this->metricsExporter->saveCollector($statsReconnect);
                     $statsReconnect = $this->getStatsCollector();
                 }
@@ -110,7 +110,7 @@ class HaSingleListPush implements MetricsAwareInterface
         } else {
             $stats->registerFail();
         }
-        if ($this->statsdPrefix && !is_null($this->metricsExporter)) {
+        if (!is_null($this->metricsExporter)) {
             $this->metricsExporter->saveCollector($statsNoAvailable);
             $this->metricsExporter->saveCollector($stats);
         }
@@ -183,6 +183,6 @@ class HaSingleListPush implements MetricsAwareInterface
 
     private function getStatsCollector(): ConnectionStatsCollector
     {
-        return new ConnectionStatsCollector((string)$this->statsdPrefix);
+        return new ConnectionStatsCollector($this->storageType);
     }
 }

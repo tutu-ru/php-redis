@@ -36,7 +36,7 @@ class HaSingleListPushTest extends BaseTest
         $list = $connectionManager->createHASingleListPush(self::LIST_NAME, ['fail-1', 'fail-2', 'google']);
         $list->setRetryTimeout(10);
         $list->setMetricsExporter($this->metricsExporter);
-        $list->setStatsdPrefix('app.transport.redis');
+        $list->setStorageType('redis_tests');
         $this->assertTrue($list->isAvailable());
 
         try {
@@ -48,13 +48,14 @@ class HaSingleListPushTest extends BaseTest
 
         $this->metricsExporter->export();
         $this->assertCount(5, $this->metricsExporter->getExportedMetrics());
-        $this->assertCount(5, $this->metricsExporter->getExportedMetrics('app_transport_redis'));
-        $metrics = $this->metricsExporter->getExportedMetrics('app_transport_redis');
-        $this->assertEquals(['write' => 'reconnect', 'app' => 'unknown'], $metrics[0]->getTags());
-        $this->assertEquals(['write' => 'reconnect', 'app' => 'unknown'], $metrics[1]->getTags());
-        $this->assertEquals(['write' => 'reconnect', 'app' => 'unknown'], $metrics[2]->getTags());
-        $this->assertEquals(['write' => 'no_available_connections', 'app' => 'unknown'], $metrics[3]->getTags());
-        $this->assertEquals(['write' => 'fail', 'app' => 'unknown'], $metrics[4]->getTags());
+        $this->assertCount(5, $this->metricsExporter->getExportedMetrics('redis_write_duration'));
+        $metrics = $this->metricsExporter->getExportedMetrics('redis_write_duration');
+        $tags = ['storage_type' => 'redis_tests', 'app' => 'unknown'];
+        $this->assertEquals($tags + ['result' => 'reconnect'], $metrics[0]->getTags());
+        $this->assertEquals($tags + ['result' => 'reconnect'], $metrics[1]->getTags());
+        $this->assertEquals($tags + ['result' => 'reconnect'], $metrics[2]->getTags());
+        $this->assertEquals($tags + ['result' => 'no_available_connections'], $metrics[3]->getTags());
+        $this->assertEquals($tags + ['result' => 'fail'], $metrics[4]->getTags());
     }
 
 
@@ -74,7 +75,9 @@ class HaSingleListPushTest extends BaseTest
         $this->assertTrue($messagesInTest1 == $countPush || $messagesInTest2 == $countPush);
 
         $this->metricsExporter->export();
-        $this->assertCount(0, $this->metricsExporter->getExportedMetrics());
+
+        // 50 success writes + 1 possible reconnect
+        $this->assertGreaterThan(50, $this->metricsExporter->getExportedMetrics());
     }
 
 

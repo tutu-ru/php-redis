@@ -8,15 +8,15 @@ use TutuRu\Metrics\MetricsCollector;
 class ConnectionStatsCollector extends MetricsCollector
 {
     /** @var string */
-    private $prefix;
+    private $storageType;
 
     /** @var string */
-    private $postfix;
+    private $result;
 
 
-    public function __construct(string $prefix)
+    public function __construct(?string $storageType = null)
     {
-        $this->prefix = $prefix;
+        $this->storageType = $storageType ?? 'unknown';
         $this->startTiming();
     }
 
@@ -45,21 +45,21 @@ class ConnectionStatsCollector extends MetricsCollector
     }
 
 
-    private function finalize($postfix)
+    private function finalize($result)
     {
-        $this->postfix = $postfix;
+        $this->result = $result;
         $this->endTiming();
     }
 
 
     protected function getTimersMetricName(): string
     {
-        return $this->prefix;
+        return 'redis_write_duration';
     }
 
 
     protected function getTimersMetricTags(): array
     {
-        return ['write' => $this->postfix];
+        return ['storage_type' => $this->storageType, 'result' => $this->result];
     }
 }
