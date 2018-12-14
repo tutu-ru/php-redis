@@ -106,10 +106,8 @@ class HaSingleListPush implements MetricsAwareInterface
         $pushStats->endTiming();
         $pushStats->setResult($success ? PushStatsCollector::RESULT_SUCCESS : PushStatsCollector::RESULT_FAIL);
 
-        if (!is_null($this->metricsExporter)) {
-            $this->metricsExporter->saveCollector($reconnectStats);
-            $this->metricsExporter->saveCollector($pushStats);
-        }
+        $reconnectStats->export($this->metricsExporter);
+        $pushStats->export($this->metricsExporter);
 
         if (!$success) {
             throw $lastException;
