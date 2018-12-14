@@ -47,15 +47,21 @@ class HaSingleListPushTest extends BaseTest
         }
 
         $this->metricsExporter->export();
-        $this->assertCount(5, $this->metricsExporter->getExportedMetrics());
-        $this->assertCount(5, $this->metricsExporter->getExportedMetrics('redis_write_duration'));
-        $metrics = $this->metricsExporter->getExportedMetrics('redis_write_duration');
+        $this->assertCount(4, $this->metricsExporter->getExportedMetrics());
         $tags = ['storage_type' => 'redis_tests', 'app' => 'unknown'];
-        $this->assertEquals($tags + ['result' => 'reconnect'], $metrics[0]->getTags());
-        $this->assertEquals($tags + ['result' => 'reconnect'], $metrics[1]->getTags());
-        $this->assertEquals($tags + ['result' => 'reconnect'], $metrics[2]->getTags());
-        $this->assertEquals($tags + ['result' => 'no_available_connections'], $metrics[3]->getTags());
-        $this->assertEquals($tags + ['result' => 'fail'], $metrics[4]->getTags());
+
+        $reconnectMetrics = $this->metricsExporter->getExportedMetrics('redis_failed_write_duration');
+        $this->assertCount(3, $reconnectMetrics);
+        $this->assertEquals($tags, $reconnectMetrics[0]->getTags());
+        $this->assertEquals($tags, $reconnectMetrics[1]->getTags());
+        $this->assertEquals($tags, $reconnectMetrics[2]->getTags());
+
+        $pushMetrics = $this->metricsExporter->getExportedMetrics('redis_write_duration');
+        $this->assertCount(1, $pushMetrics);
+        $this->assertEquals(
+            $tags + ['result' => 'fail', 'fail_reason' => 'no_available_connections'],
+            $pushMetrics[0]->getTags()
+        );
     }
 
 

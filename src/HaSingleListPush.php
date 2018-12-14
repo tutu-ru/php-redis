@@ -8,6 +8,8 @@ use TutuRu\Metrics\MetricsAwareTrait;
 use TutuRu\Redis\Exceptions\DisconnectException;
 use TutuRu\Redis\Exceptions\NoAvailableConnectionsException;
 use TutuRu\Redis\Exceptions\RedisException;
+use TutuRu\Redis\MetricsCollector\PushStatsCollector;
+use TutuRu\Redis\MetricsCollector\ReconnectStatsCollector;
 
 class HaSingleListPush implements MetricsAwareInterface
 {
@@ -70,22 +72,18 @@ class HaSingleListPush implements MetricsAwareInterface
 
     public function push($message)
     {
-        $stats = $this->getStatsCollector();
-        $statsNoAvailable = $this->getStatsCollector();
-        $statsReconnect = $this->getStatsCollector();
+        $pushStats = new PushStatsCollector($this->storageType);
+        $reconnectStats = new ReconnectStatsCollector($this->storageType);
+        $pushStats->startTiming();
 
         $lastException = null;
         $success = false;
         $tryCount = count($this->connectionNames);
         for ($i = 0; $i <= $tryCount; $i++) {
             if ($i > 0) {
-                $statsReconnect->registerReconnect();
-                if (!is_null($this->metricsExporter)) {
-                    $this->metricsExporter->saveCollector($statsReconnect);
-                    $statsReconnect = $this->getStatsCollector();
-                }
+                $reconnectStats->registerReconnect();
             }
-            $statsReconnect->startTiming();
+            $reconnectStats->startTiming();
 
             try {
                 $connection = $this->getConnection();
@@ -95,7 +93,7 @@ class HaSingleListPush implements MetricsAwareInterface
             } catch (NoAvailableConnectionsException $e) {
                 $lastException = $e;
                 $this->processException($e);
-                $statsNoAvailable->registerNoAvailableConnections();
+                $pushStats->setFailReason(PushStatsCollector::FAIL_REASON_NO_CONNECTIONS);
                 break;
             } catch (\Exception $e) {
                 // может быть как ошибка соединения, так и ошибка записи в редис
@@ -105,14 +103,12 @@ class HaSingleListPush implements MetricsAwareInterface
             }
         }
 
-        if ($success) {
-            $stats->registerSuccess();
-        } else {
-            $stats->registerFail();
-        }
+        $pushStats->endTiming();
+        $pushStats->setResult($success ? PushStatsCollector::RESULT_SUCCESS : PushStatsCollector::RESULT_FAIL);
+
         if (!is_null($this->metricsExporter)) {
-            $this->metricsExporter->saveCollector($statsNoAvailable);
-            $this->metricsExporter->saveCollector($stats);
+            $this->metricsExporter->saveCollector($reconnectStats);
+            $this->metricsExporter->saveCollector($pushStats);
         }
 
         if (!$success) {
@@ -178,11 +174,5 @@ class HaSingleListPush implements MetricsAwareInterface
         if (!is_null($this->exceptionHandler)) {
             call_user_func($this->exceptionHandler, $exception);
         }
-    }
-
-
-    private function getStatsCollector(): ConnectionStatsCollector
-    {
-        return new ConnectionStatsCollector($this->storageType);
     }
 }
