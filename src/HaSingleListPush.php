@@ -71,18 +71,21 @@ class HaSingleListPush implements MetricsAwareInterface
     public function push($message)
     {
         $stats = $this->getStatsCollector();
+        $statsNoAvailable = $this->getStatsCollector();
         $statsReconnect = $this->getStatsCollector();
 
         $lastException = null;
         $success = false;
         $tryCount = count($this->connectionNames);
         for ($i = 0; $i <= $tryCount; $i++) {
-            if (!is_null($statsReconnect)) {
-                if ($i > 0) {
-                    $statsReconnect->registerReconnect();
+            if ($i > 0) {
+                $statsReconnect->registerReconnect();
+                if ($this->statsdPrefix && !is_null($this->metricsExporter)) {
+                    $this->metricsExporter->saveCollector($statsReconnect);
+                    $statsReconnect = $this->getStatsCollector();
                 }
-                $statsReconnect->startTiming();
             }
+            $statsReconnect->startTiming();
 
             try {
                 $connection = $this->getConnection();
@@ -92,9 +95,7 @@ class HaSingleListPush implements MetricsAwareInterface
             } catch (NoAvailableConnectionsException $e) {
                 $lastException = $e;
                 $this->processException($e);
-                if (!is_null($stats)) {
-                    $stats->registerNoAvailableConnections();
-                }
+                $statsNoAvailable->registerNoAvailableConnections();
                 break;
             } catch (\Exception $e) {
                 // может быть как ошибка соединения, так и ошибка записи в редис
@@ -104,13 +105,14 @@ class HaSingleListPush implements MetricsAwareInterface
             }
         }
 
-        if (!is_null($stats)) {
-            if ($success) {
-                $stats->registerSuccess();
-            } else {
-                $stats->registerFail();
-                throw $lastException;
-            }
+        if ($success) {
+            $stats->registerSuccess();
+        } else {
+            $stats->registerFail();
+        }
+        if ($this->statsdPrefix && !is_null($this->metricsExporter)) {
+            $this->metricsExporter->saveCollector($statsNoAvailable);
+            $this->metricsExporter->saveCollector($stats);
         }
 
         if (!$success) {
@@ -179,13 +181,8 @@ class HaSingleListPush implements MetricsAwareInterface
     }
 
 
-    private function getStatsCollector(): ?ConnectionStatsCollector
+    private function getStatsCollector(): ConnectionStatsCollector
     {
-        $stats = null;
-        if ($this->statsdPrefix && !is_null($this->metricsSessionRegistry)) {
-            $stats = new ConnectionStatsCollector($this->statsdPrefix);
-            $stats->setMetricsSessionRegistry($this->metricsSessionRegistry);
-        }
-        return $stats;
+        return new ConnectionStatsCollector((string)$this->statsdPrefix);
     }
 }

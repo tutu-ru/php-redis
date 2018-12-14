@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace TutuRu\Redis;
 
 use TutuRu\Metrics\MetricsCollector;
-use TutuRu\Metrics\MetricType;
 
 class ConnectionStatsCollector extends MetricsCollector
 {
@@ -50,23 +49,17 @@ class ConnectionStatsCollector extends MetricsCollector
     {
         $this->postfix = $postfix;
         $this->endTiming();
-        $this->save();
-    }
-
-    protected function saveCustomMetrics(): void
-    {
     }
 
 
-    protected function getTimingKey(): string
+    protected function getTimersMetricName(): string
     {
-        $keyParts = [MetricType::TYPE_LOW_LEVEL];
-        foreach (explode('.', $this->prefix) as $part) {
-            $keyParts[] = $part;
-        }
-        $keyParts[] = 'write';
-        $keyParts[] = $this->postfix;
+        return $this->prefix;
+    }
 
-        return $this->glueNamespaces($keyParts);
+
+    protected function getTimersMetricTags(): array
+    {
+        return ['write' => $this->postfix];
     }
 }
