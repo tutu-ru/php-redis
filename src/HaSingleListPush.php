@@ -8,12 +8,14 @@ use TutuRu\Metrics\MetricsAwareTrait;
 use TutuRu\Redis\Exceptions\DisconnectException;
 use TutuRu\Redis\Exceptions\NoAvailableConnectionsException;
 use TutuRu\Redis\Exceptions\RedisException;
-use TutuRu\Redis\MetricsCollector\PushStatsCollector;
-use TutuRu\Redis\MetricsCollector\ReconnectStatsCollector;
+use TutuRu\Redis\MetricsCollector\PushMetricsCollector;
+use TutuRu\Redis\MetricsCollector\ReconnectMetricsCollector;
 
 class HaSingleListPush implements MetricsAwareInterface
 {
     use MetricsAwareTrait;
+
+    private const FAIL_REASON_NO_CONNECTIONS = 'no_available_connections';
 
     /** @var ConnectionManager */
     private $connectionManager;
@@ -72,18 +74,19 @@ class HaSingleListPush implements MetricsAwareInterface
 
     public function push($message)
     {
-        $pushStats = new PushStatsCollector($this->storageType);
-        $reconnectStats = new ReconnectStatsCollector($this->storageType);
-        $pushStats->startTiming();
+        $pushCollector = new PushMetricsCollector($this->storageType);
+        $pushCollector->startTiming();
+        $reconnectCollector = $this->initReconnectCollector();
 
         $lastException = null;
         $success = false;
+        $failReason = null;
         $tryCount = count($this->connectionNames);
         for ($i = 0; $i <= $tryCount; $i++) {
             if ($i > 0) {
-                $reconnectStats->registerReconnect();
+                $this->registerReconnect($reconnectCollector);
+                $reconnectCollector = $this->initReconnectCollector();
             }
-            $reconnectStats->startTiming();
 
             try {
                 $connection = $this->getConnection();
@@ -93,7 +96,7 @@ class HaSingleListPush implements MetricsAwareInterface
             } catch (NoAvailableConnectionsException $e) {
                 $lastException = $e;
                 $this->processException($e);
-                $pushStats->setFailReason(PushStatsCollector::FAIL_REASON_NO_CONNECTIONS);
+                $failReason = self::FAIL_REASON_NO_CONNECTIONS;
                 break;
             } catch (\Exception $e) {
                 // может быть как ошибка соединения, так и ошибка записи в редис
@@ -103,11 +106,15 @@ class HaSingleListPush implements MetricsAwareInterface
             }
         }
 
-        $pushStats->endTiming();
-        $pushStats->setResult($success ? PushStatsCollector::RESULT_SUCCESS : PushStatsCollector::RESULT_FAIL);
-
-        $reconnectStats->export($this->metricsExporter);
-        $pushStats->export($this->metricsExporter);
+        if (!is_null($this->metricsExporter)) {
+            $pushCollector->endTiming();
+            if ($success) {
+                $pushCollector->success();
+            } else {
+                $pushCollector->failWith($failReason);
+            }
+            $pushCollector->sendTo($this->metricsExporter);
+        }
 
         if (!$success) {
             throw $lastException;
@@ -171,6 +178,23 @@ class HaSingleListPush implements MetricsAwareInterface
     {
         if (!is_null($this->exceptionHandler)) {
             call_user_func($this->exceptionHandler, $exception);
+        }
+    }
+
+
+    private function initReconnectCollector(): ReconnectMetricsCollector
+    {
+        $reconnectCollector = new ReconnectMetricsCollector($this->storageType);
+        $reconnectCollector->startTiming();
+        return $reconnectCollector;
+    }
+
+
+    private function registerReconnect(ReconnectMetricsCollector $reconnectCollector)
+    {
+        $reconnectCollector->endTiming();
+        if ($this->metricsExporter) {
+            $reconnectCollector->sendTo($this->metricsExporter);
         }
     }
 }
