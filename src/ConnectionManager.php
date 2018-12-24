@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace TutuRu\Redis;
 
 use TutuRu\Config\ConfigContainer;
+use TutuRu\Metrics\StatsdExporterClientInterface;
 use TutuRu\Redis\Exceptions\ConnectionConfigException;
 
 class ConnectionManager
@@ -44,9 +45,16 @@ class ConnectionManager
     }
 
 
-    public function createHASingleListPush(string $listName, array $connectionNames): HaSingleListPush
-    {
-        return new HaSingleListPush($this, $listName, $connectionNames);
+    public function createHaListGroup(
+        string $listName,
+        array $connectionNames,
+        ?StatsdExporterClientInterface $statsdExporterClient = null
+    ): HaListGroup {
+        $haListGroup = new HaListGroup($this, $listName, $connectionNames);
+        if (!is_null($statsdExporterClient)) {
+            $haListGroup->setStatsdExporterClient($statsdExporterClient);
+        }
+        return $haListGroup;
     }
 
 

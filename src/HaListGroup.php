@@ -11,7 +11,7 @@ use TutuRu\Redis\Exceptions\RedisException;
 use TutuRu\Redis\MetricsCollector\PushMetricsCollector;
 use TutuRu\Redis\MetricsCollector\ReconnectMetricsCollector;
 
-class HaSingleListPush implements MetricAwareInterface
+class HaListGroup implements MetricAwareInterface
 {
     use MetricAwareTrait;
 
@@ -28,7 +28,7 @@ class HaSingleListPush implements MetricAwareInterface
     private $currentConnectionName;
 
     /** @var string */
-    private $storageType;
+    private $groupName;
 
     /** @var int */
     private $retryTimeoutInSeconds = 3;
@@ -52,9 +52,9 @@ class HaSingleListPush implements MetricAwareInterface
     }
 
 
-    public function setStorageType(string $storageType)
+    public function setGroupName(string $groupName)
     {
-        $this->storageType = $storageType;
+        $this->groupName = $groupName;
     }
 
 
@@ -72,7 +72,7 @@ class HaSingleListPush implements MetricAwareInterface
 
     public function push($message)
     {
-        $pushCollector = new PushMetricsCollector($this->storageType);
+        $pushCollector = new PushMetricsCollector($this->groupName);
         $pushCollector->startTiming();
 
         $lastException = null;
@@ -117,7 +117,7 @@ class HaSingleListPush implements MetricAwareInterface
     }
 
 
-    private function markCurrentConnectionUnavailable()
+    private function markCurrentConnectionUnavailable(): void
     {
         if (is_null($this->currentConnectionName)) {
             return;
@@ -156,7 +156,7 @@ class HaSingleListPush implements MetricAwareInterface
     }
 
 
-    private function processException(\Exception $exception)
+    private function processException(\Exception $exception): void
     {
         if (!is_null($this->exceptionHandler)) {
             call_user_func($this->exceptionHandler, $exception);
@@ -166,13 +166,13 @@ class HaSingleListPush implements MetricAwareInterface
 
     private function initReconnectCollector(): ReconnectMetricsCollector
     {
-        $reconnectCollector = new ReconnectMetricsCollector($this->storageType);
+        $reconnectCollector = new ReconnectMetricsCollector($this->groupName);
         $reconnectCollector->startTiming();
         return $reconnectCollector;
     }
 
 
-    private function registerReconnect(ReconnectMetricsCollector $reconnectCollector)
+    private function registerReconnect(ReconnectMetricsCollector $reconnectCollector): void
     {
         $reconnectCollector->endTiming();
         if ($this->statsdExporterClient) {

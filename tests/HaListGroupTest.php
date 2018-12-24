@@ -9,7 +9,7 @@ use TutuRu\Redis\Exceptions\NoAvailableConnectionsException;
 use TutuRu\Redis\Exceptions\ReadTimeoutException;
 use TutuRu\Redis\Exceptions\RedisException;
 
-class HaSingleListPushTest extends BaseTest
+class HaListGroupTest extends BaseTest
 {
     const LIST_NAME = 'test_list';
 
@@ -33,10 +33,13 @@ class HaSingleListPushTest extends BaseTest
     public function testNotFoundAvailableConnections()
     {
         $connectionManager = $this->getConnectionManager();
-        $list = $connectionManager->createHASingleListPush(self::LIST_NAME, ['fail-1', 'fail-2', 'google']);
+        $list = $connectionManager->createHaListGroup(
+            self::LIST_NAME,
+            ['fail-1', 'fail-2', 'google'],
+            $this->statsdExporterClient
+        );
         $list->setRetryTimeout(10);
-        $list->setStatsdExporterClient($this->statsdExporterClient);
-        $list->setStorageType('redis_tests');
+        $list->setGroupName('redis_tests');
         $this->assertTrue($list->isAvailable());
 
         try {
@@ -65,8 +68,11 @@ class HaSingleListPushTest extends BaseTest
     public function testPushToOnlyAvailableList()
     {
         $connectionManager = $this->getConnectionManager();
-        $list = $connectionManager->createHASingleListPush(self::LIST_NAME, ['fail-1', 'test-1', 'test-2']);
-        $list->setStatsdExporterClient($this->statsdExporterClient);
+        $list = $connectionManager->createHaListGroup(
+            self::LIST_NAME,
+            ['fail-1', 'test-1', 'test-2'],
+            $this->statsdExporterClient
+        );
         $list->setRetryTimeout(10);
         $countPush = 50;
         for ($i = 0; $i < $countPush; $i++) {
@@ -93,8 +99,11 @@ class HaSingleListPushTest extends BaseTest
         $expectedConnectionPushedCount = 2;
         // В цикле для того чтобы рандомайзер соединений выпал на разные листы
         for ($numTry = 0; $numTry < 20; $numTry++) {
-            $list = $connectionManager->createHASingleListPush(self::LIST_NAME, $connectionNames);
-            $list->setStatsdExporterClient($this->statsdExporterClient);
+            $list = $connectionManager->createHaListGroup(
+                self::LIST_NAME,
+                $connectionNames,
+                $this->statsdExporterClient
+            );
             $list->setRetryTimeout(10);
             for ($i = 0; $i < $countPush; $i++) {
                 $list->push('msg');
@@ -122,8 +131,7 @@ class HaSingleListPushTest extends BaseTest
     public function testEmptyList($listName, $connections)
     {
         $this->expectException(RedisException::class);
-        $list = $this->getConnectionManager()->createHASingleListPush($listName, $connections);
-        $list->setStatsdExporterClient($this->statsdExporterClient);
+        $list = $this->getConnectionManager()->createHaListGroup($listName, $connections, $this->statsdExporterClient);
         $list->push('{"test"=>"text"}');
     }
 
@@ -145,8 +153,7 @@ class HaSingleListPushTest extends BaseTest
     {
         $connectionManager = $this->getConnectionManager();
         $startTime = microtime(true);
-        $list = $connectionManager->createHASingleListPush('test', [$connectionName]);
-        $list->setStatsdExporterClient($this->statsdExporterClient);
+        $list = $connectionManager->createHaListGroup('test', [$connectionName], $this->statsdExporterClient);
 
         /** @var array|RedisException[] $exceptions */
         $exceptions = [];
