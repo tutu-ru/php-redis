@@ -46,7 +46,7 @@ class HaSingleListPushTest extends BaseTest
             $this->assertFalse($list->isAvailable());
         }
 
-        $this->statsdExporterClient->export();
+        $this->statsdExporterClient->save();
         $this->assertCount(4, $this->statsdExporterClient->getExportedMetrics());
         $tags = ['storage_type' => 'redis_tests', 'app' => 'unknown'];
 
@@ -66,7 +66,7 @@ class HaSingleListPushTest extends BaseTest
     {
         $connectionManager = $this->getConnectionManager();
         $list = $connectionManager->createHASingleListPush(self::LIST_NAME, ['fail-1', 'test-1', 'test-2']);
-        $list->setMetricsExporter($this->statsdExporterClient);
+        $list->setStatsdExporterClient($this->statsdExporterClient);
         $list->setRetryTimeout(10);
         $countPush = 50;
         for ($i = 0; $i < $countPush; $i++) {
@@ -77,10 +77,10 @@ class HaSingleListPushTest extends BaseTest
         $messagesInTest2 = $connectionManager->getConnection('test-2')->getList(self::LIST_NAME)->getLength();
         $this->assertTrue($messagesInTest1 == $countPush || $messagesInTest2 == $countPush);
 
-        $this->statsdExporterClient->export();
+        $this->statsdExporterClient->save();
 
         // 50 success writes + 1 possible reconnect
-        $this->assertGreaterThan(50, $this->statsdExporterClient->getExportedMetrics());
+        $this->assertGreaterThanOrEqual(50, count($this->statsdExporterClient->getExportedMetrics()));
     }
 
 
@@ -94,7 +94,7 @@ class HaSingleListPushTest extends BaseTest
         // В цикле для того чтобы рандомайзер соединений выпал на разные листы
         for ($numTry = 0; $numTry < 20; $numTry++) {
             $list = $connectionManager->createHASingleListPush(self::LIST_NAME, $connectionNames);
-            $list->setMetricsExporter($this->statsdExporterClient);
+            $list->setStatsdExporterClient($this->statsdExporterClient);
             $list->setRetryTimeout(10);
             for ($i = 0; $i < $countPush; $i++) {
                 $list->push('msg');
@@ -118,10 +118,6 @@ class HaSingleListPushTest extends BaseTest
 
     /**
      * @dataProvider emptyListDataProvider
-     *
-     * @param $listName
-     * @param $connections
-     * @throws NoAvailableConnectionsException
      */
     public function testEmptyList($listName, $connections)
     {
@@ -144,10 +140,6 @@ class HaSingleListPushTest extends BaseTest
 
     /**
      * @dataProvider connectionTimeoutProvider
-     * @param $connectionName
-     * @param $expectedTimeout
-     * @param $expectedException
-     * @throws \Exception
      */
     public function testConnectionTimeout($connectionName, $expectedTimeout, $expectedException)
     {

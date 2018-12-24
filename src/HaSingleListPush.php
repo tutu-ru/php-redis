@@ -72,8 +72,8 @@ class HaSingleListPush implements MetricAwareInterface
 
     public function push($message)
     {
-        $pushStats = new PushMetricsCollector($this->storageType);
-        $pushStats->startTiming();
+        $pushCollector = new PushMetricsCollector($this->storageType);
+        $pushCollector->startTiming();
 
         $lastException = null;
         $tryCount = count($this->connectionNames);
@@ -88,7 +88,7 @@ class HaSingleListPush implements MetricAwareInterface
                 $lastException = $e;
                 $this->processException($e);
                 break;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // может быть как ошибка соединения, так и ошибка записи в редис
                 $this->markCurrentConnectionUnavailable();
                 $lastException = $e;
@@ -97,16 +97,7 @@ class HaSingleListPush implements MetricAwareInterface
             $this->registerReconnect($reconnectCollector);
         }
 
-        if (!is_null($this->statsdExporterClient)) {
-            $pushStats->endTiming();
-            if (is_null($lastException)) {
-                $pushStats->success();
-            } else {
-                $pushStats->failWith($lastException);
-            }
-            $pushStats->sendToStatsdExporter($this->statsdExporterClient);
-        }
-
+        $this->registerPushResult($pushCollector, $lastException);
         if (!is_null($lastException)) {
             throw $lastException;
         }
@@ -187,5 +178,21 @@ class HaSingleListPush implements MetricAwareInterface
         if ($this->statsdExporterClient) {
             $reconnectCollector->sendToStatsdExporter($this->statsdExporterClient);
         }
+    }
+
+
+    private function registerPushResult(PushMetricsCollector $pushStats, ?\Throwable $lastException): void
+    {
+        if (is_null($this->statsdExporterClient)) {
+            return;
+        }
+
+        $pushStats->endTiming();
+        if (is_null($lastException)) {
+            $pushStats->success();
+        } else {
+            $pushStats->failWith($lastException);
+        }
+        $pushStats->sendToStatsdExporter($this->statsdExporterClient);
     }
 }
