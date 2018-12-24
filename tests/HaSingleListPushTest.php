@@ -35,7 +35,7 @@ class HaSingleListPushTest extends BaseTest
         $connectionManager = $this->getConnectionManager();
         $list = $connectionManager->createHASingleListPush(self::LIST_NAME, ['fail-1', 'fail-2', 'google']);
         $list->setRetryTimeout(10);
-        $list->setMetricsExporter($this->metricsExporter);
+        $list->setStatsdExporterClient($this->statsdExporterClient);
         $list->setStorageType('redis_tests');
         $this->assertTrue($list->isAvailable());
 
@@ -46,22 +46,19 @@ class HaSingleListPushTest extends BaseTest
             $this->assertFalse($list->isAvailable());
         }
 
-        $this->metricsExporter->export();
-        $this->assertCount(4, $this->metricsExporter->getExportedMetrics());
+        $this->statsdExporterClient->export();
+        $this->assertCount(4, $this->statsdExporterClient->getExportedMetrics());
         $tags = ['storage_type' => 'redis_tests', 'app' => 'unknown'];
 
-        $reconnectMetrics = $this->metricsExporter->getExportedMetrics('redis_failed_write_duration');
+        $reconnectMetrics = $this->statsdExporterClient->getExportedMetrics('redis_failed_write_duration');
         $this->assertCount(3, $reconnectMetrics);
         $this->assertEquals($tags, $reconnectMetrics[0]->getTags());
         $this->assertEquals($tags, $reconnectMetrics[1]->getTags());
         $this->assertEquals($tags, $reconnectMetrics[2]->getTags());
 
-        $pushMetrics = $this->metricsExporter->getExportedMetrics('redis_write_duration');
+        $pushMetrics = $this->statsdExporterClient->getExportedMetrics('redis_write_duration');
         $this->assertCount(1, $pushMetrics);
-        $this->assertEquals(
-            $tags + ['result' => 'fail', 'fail_reason' => 'no_available_connections'],
-            $pushMetrics[0]->getTags()
-        );
+        $this->assertEquals($tags + ['result' => 'fail_no_available_connections'], $pushMetrics[0]->getTags());
     }
 
 
@@ -69,7 +66,7 @@ class HaSingleListPushTest extends BaseTest
     {
         $connectionManager = $this->getConnectionManager();
         $list = $connectionManager->createHASingleListPush(self::LIST_NAME, ['fail-1', 'test-1', 'test-2']);
-        $list->setMetricsExporter($this->metricsExporter);
+        $list->setMetricsExporter($this->statsdExporterClient);
         $list->setRetryTimeout(10);
         $countPush = 50;
         for ($i = 0; $i < $countPush; $i++) {
@@ -80,10 +77,10 @@ class HaSingleListPushTest extends BaseTest
         $messagesInTest2 = $connectionManager->getConnection('test-2')->getList(self::LIST_NAME)->getLength();
         $this->assertTrue($messagesInTest1 == $countPush || $messagesInTest2 == $countPush);
 
-        $this->metricsExporter->export();
+        $this->statsdExporterClient->export();
 
         // 50 success writes + 1 possible reconnect
-        $this->assertGreaterThan(50, $this->metricsExporter->getExportedMetrics());
+        $this->assertGreaterThan(50, $this->statsdExporterClient->getExportedMetrics());
     }
 
 
@@ -97,7 +94,7 @@ class HaSingleListPushTest extends BaseTest
         // В цикле для того чтобы рандомайзер соединений выпал на разные листы
         for ($numTry = 0; $numTry < 20; $numTry++) {
             $list = $connectionManager->createHASingleListPush(self::LIST_NAME, $connectionNames);
-            $list->setMetricsExporter($this->metricsExporter);
+            $list->setMetricsExporter($this->statsdExporterClient);
             $list->setRetryTimeout(10);
             for ($i = 0; $i < $countPush; $i++) {
                 $list->push('msg');
@@ -130,7 +127,7 @@ class HaSingleListPushTest extends BaseTest
     {
         $this->expectException(RedisException::class);
         $list = $this->getConnectionManager()->createHASingleListPush($listName, $connections);
-        $list->setMetricsExporter($this->metricsExporter);
+        $list->setStatsdExporterClient($this->statsdExporterClient);
         $list->push('{"test"=>"text"}');
     }
 
@@ -157,7 +154,7 @@ class HaSingleListPushTest extends BaseTest
         $connectionManager = $this->getConnectionManager();
         $startTime = microtime(true);
         $list = $connectionManager->createHASingleListPush('test', [$connectionName]);
-        $list->setMetricsExporter($this->metricsExporter);
+        $list->setStatsdExporterClient($this->statsdExporterClient);
 
         /** @var array|RedisException[] $exceptions */
         $exceptions = [];
