@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace TutuRu\Redis;
 
-class RedisList
+class RedisList implements RedisPushListInterface
 {
     /** @var Connection */
     private $connection;
@@ -25,7 +25,7 @@ class RedisList
     }
 
 
-    public function push($value)
+    public function push($value): void
     {
         $this->connection->lpush($this->name, [$value]);
     }
@@ -40,5 +40,11 @@ class RedisList
     public function del()
     {
         $this->connection->del([$this->name]);
+    }
+
+
+    public function isAvailable(): bool
+    {
+        return $this->connection->isAvailable();
     }
 }

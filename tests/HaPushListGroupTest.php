@@ -4,27 +4,14 @@ declare(strict_types=1);
 namespace TutuRu\Tests\Redis;
 
 use Predis\Connection\ConnectionException;
-use TutuRu\Metrics\SessionRegistryInterface;
-use TutuRu\Metrics\UdpMetricsFactory;
 use TutuRu\Redis\Exceptions\ConnectionTimeoutException;
 use TutuRu\Redis\Exceptions\NoAvailableConnectionsException;
 use TutuRu\Redis\Exceptions\ReadTimeoutException;
 use TutuRu\Redis\Exceptions\RedisException;
 
-class HaSingleListPushTest extends BaseTest
+class HaListGroupTest extends BaseTest
 {
     const LIST_NAME = 'test_list';
-
-    /** @var SessionRegistryInterface */
-    private $metricsSessionRegistry;
-
-
-    public function setUp()
-    {
-        parent::setUp();
-        // TODO: memory metrics
-        $this->metricsSessionRegistry = UdpMetricsFactory::createSessionRegistry($this->config);
-    }
 
 
     public function tearDown()
@@ -42,12 +29,17 @@ class HaSingleListPushTest extends BaseTest
         }
     }
 
+
     public function testNotFoundAvailableConnections()
     {
         $connectionManager = $this->getConnectionManager();
-        $list = $connectionManager->createHASingleListPush(self::LIST_NAME, ['fail-1', 'fail-2', 'google']);
+        $list = $connectionManager->createHaPushListGroup(
+            self::LIST_NAME,
+            ['fail-1', 'fail-2', 'google'],
+            $this->statsdExporterClient
+        );
         $list->setRetryTimeout(10);
-        $list->setStatsdPrefix('app.transport.redis');
+        $list->setGroupName('redis_tests');
         $this->assertTrue($list->isAvailable());
 
         try {
@@ -57,19 +49,30 @@ class HaSingleListPushTest extends BaseTest
             $this->assertFalse($list->isAvailable());
         }
 
-        // TODO: memory metrics
-        // $stats = $this->_getFacadeStatsD()->getWorkSession()->getResult();
-        // $this->assertArrayNotHasKey('low_level.app.transport.redis.write.success', $stats);
-        // $this->assertCount(3, $stats['low_level.app.transport.redis.write.reconnect']);
-        // $this->assertCount(1, $stats['low_level.app.transport.redis.write.no_available_connections']);
-        // $this->assertCount(1, $stats['low_level.app.transport.redis.write.fail']);
+        $this->statsdExporterClient->save();
+        $this->assertCount(4, $this->statsdExporterClient->getExportedMetrics());
+        $tags = ['storage_type' => 'redis_tests', 'app' => 'unknown'];
+
+        $reconnectMetrics = $this->statsdExporterClient->getExportedMetrics('redis_failed_write_duration');
+        $this->assertCount(3, $reconnectMetrics);
+        $this->assertEquals($tags, $reconnectMetrics[0]->getTags());
+        $this->assertEquals($tags, $reconnectMetrics[1]->getTags());
+        $this->assertEquals($tags, $reconnectMetrics[2]->getTags());
+
+        $pushMetrics = $this->statsdExporterClient->getExportedMetrics('redis_write_duration');
+        $this->assertCount(1, $pushMetrics);
+        $this->assertEquals($tags + ['result' => 'fail_no_available_connections'], $pushMetrics[0]->getTags());
     }
 
 
     public function testPushToOnlyAvailableList()
     {
         $connectionManager = $this->getConnectionManager();
-        $list = $connectionManager->createHASingleListPush(self::LIST_NAME, ['fail-1', 'test-1', 'test-2']);
+        $list = $connectionManager->createHaPushListGroup(
+            self::LIST_NAME,
+            ['fail-1', 'test-1', 'test-2'],
+            $this->statsdExporterClient
+        );
         $list->setRetryTimeout(10);
         $countPush = 50;
         for ($i = 0; $i < $countPush; $i++) {
@@ -80,8 +83,10 @@ class HaSingleListPushTest extends BaseTest
         $messagesInTest2 = $connectionManager->getConnection('test-2')->getList(self::LIST_NAME)->getLength();
         $this->assertTrue($messagesInTest1 == $countPush || $messagesInTest2 == $countPush);
 
-        // TODO: memory metrics
-        // $this->assertEmpty($this->_getFacadeStatsD()->getWorkSession()->getResult());
+        $this->statsdExporterClient->save();
+
+        // 50 success writes + 1 possible reconnect
+        $this->assertGreaterThanOrEqual(50, count($this->statsdExporterClient->getExportedMetrics()));
     }
 
 
@@ -94,7 +99,11 @@ class HaSingleListPushTest extends BaseTest
         $expectedConnectionPushedCount = 2;
         // В цикле для того чтобы рандомайзер соединений выпал на разные листы
         for ($numTry = 0; $numTry < 20; $numTry++) {
-            $list = $connectionManager->createHASingleListPush(self::LIST_NAME, $connectionNames);
+            $list = $connectionManager->createHaPushListGroup(
+                self::LIST_NAME,
+                $connectionNames,
+                $this->statsdExporterClient
+            );
             $list->setRetryTimeout(10);
             for ($i = 0; $i < $countPush; $i++) {
                 $list->push('msg');
@@ -118,15 +127,11 @@ class HaSingleListPushTest extends BaseTest
 
     /**
      * @dataProvider emptyListDataProvider
-     *
-     * @param $listName
-     * @param $connections
-     * @throws NoAvailableConnectionsException
      */
     public function testEmptyList($listName, $connections)
     {
         $this->expectException(RedisException::class);
-        $list = $this->getConnectionManager()->createHASingleListPush($listName, $connections);
+        $list = $this->getConnectionManager()->createHaPushListGroup($listName, $connections, $this->statsdExporterClient);
         $list->push('{"test"=>"text"}');
     }
 
@@ -143,16 +148,12 @@ class HaSingleListPushTest extends BaseTest
 
     /**
      * @dataProvider connectionTimeoutProvider
-     * @param $connectionName
-     * @param $expectedTimeout
-     * @param $expectedException
-     * @throws \Exception
      */
     public function testConnectionTimeout($connectionName, $expectedTimeout, $expectedException)
     {
         $connectionManager = $this->getConnectionManager();
         $startTime = microtime(true);
-        $list = $connectionManager->createHASingleListPush('test', [$connectionName]);
+        $list = $connectionManager->createHaPushListGroup('test', [$connectionName], $this->statsdExporterClient);
 
         /** @var array|RedisException[] $exceptions */
         $exceptions = [];
