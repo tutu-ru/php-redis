@@ -76,8 +76,9 @@ class HaListGroup implements MetricAwareInterface
         $pushCollector->startTiming();
 
         $lastException = null;
-        $tryCount = count($this->connectionNames);
-        for ($i = 0; $i <= $tryCount; $i++) {
+        // в дополнительной итерации будет выброшено NoAvailableConnectionsException
+        $tryCount = count($this->connectionNames) + 1;
+        for ($i = 0; $i < $tryCount; $i++) {
             $reconnectCollector = $this->initReconnectCollector();
             try {
                 $connection = $this->getConnection();
