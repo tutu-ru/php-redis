@@ -45,12 +45,12 @@ class ConnectionManager
     }
 
 
-    public function createHaListGroup(
+    public function createHaPushListGroup(
         string $listName,
         array $connectionNames,
         ?StatsdExporterClientInterface $statsdExporterClient = null
-    ): HaListGroup {
-        $haListGroup = new HaListGroup($this, $listName, $connectionNames);
+    ): HaPushListGroup {
+        $haListGroup = new HaPushListGroup($this, $listName, $connectionNames);
         if (!is_null($statsdExporterClient)) {
             $haListGroup->setStatsdExporterClient($statsdExporterClient);
         }

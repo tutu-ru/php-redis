@@ -11,7 +11,7 @@ use TutuRu\Redis\Exceptions\RedisException;
 use TutuRu\Redis\MetricsCollector\PushMetricsCollector;
 use TutuRu\Redis\MetricsCollector\ReconnectMetricsCollector;
 
-class HaListGroup implements MetricAwareInterface
+class HaPushListGroup implements RedisPushListInterface, MetricAwareInterface
 {
     use MetricAwareTrait;
 
@@ -70,7 +70,7 @@ class HaListGroup implements MetricAwareInterface
     }
 
 
-    public function push($message)
+    public function push($message): void
     {
         $pushCollector = new PushMetricsCollector($this->groupName);
         $pushCollector->startTiming();

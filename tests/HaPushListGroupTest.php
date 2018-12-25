@@ -33,7 +33,7 @@ class HaListGroupTest extends BaseTest
     public function testNotFoundAvailableConnections()
     {
         $connectionManager = $this->getConnectionManager();
-        $list = $connectionManager->createHaListGroup(
+        $list = $connectionManager->createHaPushListGroup(
             self::LIST_NAME,
             ['fail-1', 'fail-2', 'google'],
             $this->statsdExporterClient
@@ -68,7 +68,7 @@ class HaListGroupTest extends BaseTest
     public function testPushToOnlyAvailableList()
     {
         $connectionManager = $this->getConnectionManager();
-        $list = $connectionManager->createHaListGroup(
+        $list = $connectionManager->createHaPushListGroup(
             self::LIST_NAME,
             ['fail-1', 'test-1', 'test-2'],
             $this->statsdExporterClient
@@ -99,7 +99,7 @@ class HaListGroupTest extends BaseTest
         $expectedConnectionPushedCount = 2;
         // В цикле для того чтобы рандомайзер соединений выпал на разные листы
         for ($numTry = 0; $numTry < 20; $numTry++) {
-            $list = $connectionManager->createHaListGroup(
+            $list = $connectionManager->createHaPushListGroup(
                 self::LIST_NAME,
                 $connectionNames,
                 $this->statsdExporterClient
@@ -131,7 +131,7 @@ class HaListGroupTest extends BaseTest
     public function testEmptyList($listName, $connections)
     {
         $this->expectException(RedisException::class);
-        $list = $this->getConnectionManager()->createHaListGroup($listName, $connections, $this->statsdExporterClient);
+        $list = $this->getConnectionManager()->createHaPushListGroup($listName, $connections, $this->statsdExporterClient);
         $list->push('{"test"=>"text"}');
     }
 
@@ -153,7 +153,7 @@ class HaListGroupTest extends BaseTest
     {
         $connectionManager = $this->getConnectionManager();
         $startTime = microtime(true);
-        $list = $connectionManager->createHaListGroup('test', [$connectionName], $this->statsdExporterClient);
+        $list = $connectionManager->createHaPushListGroup('test', [$connectionName], $this->statsdExporterClient);
 
         /** @var array|RedisException[] $exceptions */
         $exceptions = [];
