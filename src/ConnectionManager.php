@@ -69,7 +69,7 @@ class ConnectionManager
         $connections = $this->config->getValue('redis.connections', null, true);
         foreach ($connections as $connectionName => $params) {
             try {
-                $cfg = new ConnectionConfig($params['host'], $params['port']);
+                $cfg = new ConnectionConfig((string)$params['host'], (int)$params['port']);
                 if (!empty($params['timeout'])) {
                     $cfg->setConnectionTimeout((float)$params['timeout']);
                 }
