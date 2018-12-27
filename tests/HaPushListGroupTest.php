@@ -131,7 +131,11 @@ class HaListGroupTest extends BaseTest
     public function testEmptyList($listName, $connections)
     {
         $this->expectException(RedisException::class);
-        $list = $this->getConnectionManager()->createHaPushListGroup($listName, $connections, $this->statsdExporterClient);
+        $list = $this->getConnectionManager()->createHaPushListGroup(
+            $listName,
+            $connections,
+            $this->statsdExporterClient
+        );
         $list->push('{"test"=>"text"}');
     }
 

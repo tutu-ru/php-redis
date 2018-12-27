@@ -6,8 +6,8 @@
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require": {
-    "tutu-ru/lib-config": "^0.9.2",
-    "tutu-ru/lib-metrics": "^0.9.6",
+    "tutu-ru/lib-config": "^1.0",
+    "tutu-ru/lib-metrics": "^1.0",
     "predis/predis": "v1.0.1",
     "php": "^7.1",
     "ext-mbstring": "*"
