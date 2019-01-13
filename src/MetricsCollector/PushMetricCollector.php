@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace TutuRu\Redis\MetricsCollector;
 
-class PushMetricsCollector extends BaseMetricsCollector
+class PushMetricCollector extends BaseMetricCollector
 {
     private const RESULT_SUCCESS = 'success';
     private const RESULT_FAIL = 'fail';

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace TutuRu\Redis;
 
-use TutuRu\Config\ConfigContainer;
+use TutuRu\Config\ConfigInterface;
 use TutuRu\Metrics\StatsdExporterClientInterface;
 use TutuRu\Redis\Exceptions\ConnectionConfigException;
 
@@ -15,11 +15,11 @@ class ConnectionManager
     /** @var Connection[] */
     private $connections = [];
 
-    /** @var ConfigContainer */
+    /** @var ConfigInterface */
     private $config;
 
 
-    public function __construct(ConfigContainer $config)
+    public function __construct(ConfigInterface $config)
     {
         $this->config = $config;
         $this->loadConnectionsConfig();
@@ -66,7 +66,7 @@ class ConnectionManager
 
     private function loadConnectionsConfig()
     {
-        $connections = $this->config->getValue('redis.connections', null, true);
+        $connections = $this->config->getValue('redis.connections', true);
         foreach ($connections as $connectionName => $params) {
             try {
                 $cfg = new ConnectionConfig((string)$params['host'], (int)$params['port']);

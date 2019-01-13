@@ -3,13 +3,13 @@ declare(strict_types=1);
 
 namespace TutuRu\Redis;
 
-use TutuRu\Redis\Exceptions\ConnectionTimeoutException;
+use TutuRu\Redis\Exceptions\RedisException;
 use TutuRu\Redis\Exceptions\DisconnectException;
+use TutuRu\Redis\Exceptions\ConnectionTimeoutException;
+use TutuRu\Redis\Exceptions\ReadTimeoutException;
+use TutuRu\Redis\Exceptions\WriteTimeoutException;
 use Predis\PredisException;
 use Predis\Client;
-use TutuRu\Redis\Exceptions\ReadTimeoutException;
-use TutuRu\Redis\Exceptions\RedisException;
-use TutuRu\Redis\Exceptions\WriteTimeoutException;
 
 class Connection
 {

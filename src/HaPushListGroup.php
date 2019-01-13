@@ -8,8 +8,8 @@ use TutuRu\Metrics\MetricAwareTrait;
 use TutuRu\Redis\Exceptions\DisconnectException;
 use TutuRu\Redis\Exceptions\NoAvailableConnectionsException;
 use TutuRu\Redis\Exceptions\RedisException;
-use TutuRu\Redis\MetricsCollector\PushMetricsCollector;
-use TutuRu\Redis\MetricsCollector\ReconnectMetricsCollector;
+use TutuRu\Redis\MetricsCollector\PushMetricCollector;
+use TutuRu\Redis\MetricsCollector\ReconnectMetricCollector;
 
 class HaPushListGroup implements RedisPushListInterface, MetricAwareInterface
 {
@@ -72,7 +72,7 @@ class HaPushListGroup implements RedisPushListInterface, MetricAwareInterface
 
     public function push($message): void
     {
-        $pushCollector = new PushMetricsCollector($this->groupName);
+        $pushCollector = new PushMetricCollector($this->groupName);
         $pushCollector->startTiming();
 
         $lastException = null;
@@ -165,15 +165,15 @@ class HaPushListGroup implements RedisPushListInterface, MetricAwareInterface
     }
 
 
-    private function initReconnectCollector(): ReconnectMetricsCollector
+    private function initReconnectCollector(): ReconnectMetricCollector
     {
-        $reconnectCollector = new ReconnectMetricsCollector($this->groupName);
+        $reconnectCollector = new ReconnectMetricCollector($this->groupName);
         $reconnectCollector->startTiming();
         return $reconnectCollector;
     }
 
 
-    private function registerReconnect(ReconnectMetricsCollector $reconnectCollector): void
+    private function registerReconnect(ReconnectMetricCollector $reconnectCollector): void
     {
         $reconnectCollector->endTiming();
         if ($this->statsdExporterClient) {
@@ -182,7 +182,7 @@ class HaPushListGroup implements RedisPushListInterface, MetricAwareInterface
     }
 
 
-    private function registerPushResult(PushMetricsCollector $pushStats, ?\Throwable $lastException): void
+    private function registerPushResult(PushMetricCollector $pushStats, ?\Throwable $lastException): void
     {
         if (is_null($this->statsdExporterClient)) {
             return;

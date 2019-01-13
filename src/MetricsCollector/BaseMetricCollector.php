@@ -5,7 +5,7 @@ namespace TutuRu\Redis\MetricsCollector;
 
 use TutuRu\Metrics\MetricCollector;
 
-abstract class BaseMetricsCollector extends MetricCollector
+abstract class BaseMetricCollector extends MetricCollector
 {
     /** @var string */
     protected $storageType;
