@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace TutuRu\Redis;
 
 use TutuRu\Config\ConfigInterface;
+use TutuRu\Config\Exception\ConfigPathNotExistExceptionInterface;
 use TutuRu\Metrics\StatsdExporterClientInterface;
 use TutuRu\Redis\Exceptions\ConnectionConfigException;
 
@@ -66,10 +67,9 @@ class ConnectionManager
 
     private function loadConnectionsConfig()
     {
-        $connections = $this->config->getValue('redis.connections', true);
-        foreach ($connections as $connectionName => $params) {
+        foreach ($this->readConnectionsConfig() as $connectionName => $params) {
             try {
-                $cfg = new ConnectionConfig((string)$params['host'], (int)$params['port']);
+                $cfg = new ConnectionConfig((string)($params['host'] ?? ''), (int)($params['port'] ?? 0));
                 if (!empty($params['timeout'])) {
                     $cfg->setConnectionTimeout((float)$params['timeout']);
                 }
@@ -86,6 +86,21 @@ class ConnectionManager
                 );
             }
         }
+    }
+
+
+    private function readConnectionsConfig(): array
+    {
+        $connections = null;
+        try {
+            $connections = $this->config->getValue('redis.connections', true);
+        } catch (ConfigPathNotExistExceptionInterface $e) {
+            throw new ConnectionConfigException("No connections config", $e->getCode(), $e);
+        }
+        if (!is_array($connections)) {
+            throw new ConnectionConfigException("Invalid connections config: " . json_encode($connections));
+        }
+        return $connections;
     }
 
 
