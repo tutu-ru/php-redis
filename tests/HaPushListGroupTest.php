@@ -51,7 +51,7 @@ class HaListGroupTest extends BaseTest
 
         $this->statsdExporterClient->save();
         $this->assertCount(4, $this->statsdExporterClient->getExportedMetrics());
-        $tags = ['storage_type' => 'redis_tests', 'app' => 'unknown'];
+        $tags = ['storage_type' => 'redis_tests', 'app' => 'unittest'];
 
         $reconnectMetrics = $this->statsdExporterClient->getExportedMetrics('redis_failed_write_duration');
         $this->assertCount(3, $reconnectMetrics);

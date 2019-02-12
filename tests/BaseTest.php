@@ -6,15 +6,14 @@ namespace TutuRu\Tests\Redis;
 use PHPUnit\Framework\TestCase;
 use TutuRu\Config\JsonConfig\MutableJsonConfig;
 use TutuRu\Redis\ConnectionManager;
-use TutuRu\Tests\Metrics\MemoryMetricExporter\MemoryMetricExporter;
-use TutuRu\Tests\Metrics\MemoryMetricExporter\MemoryMetricExporterFactory;
+use TutuRu\Tests\Metrics\MemoryStatsdExporter\MemoryStatsdExporterClient;
 
 abstract class BaseTest extends TestCase
 {
     /** @var MutableJsonConfig */
     protected $config;
 
-    /** @var MemoryMetricExporter */
+    /** @var MemoryStatsdExporterClient */
     protected $statsdExporterClient;
 
     public static function setUpBeforeClass()
@@ -28,7 +27,7 @@ abstract class BaseTest extends TestCase
     {
         parent::setUp();
         $this->config = new MutableJsonConfig(__DIR__ . "/config/application.json");
-        $this->statsdExporterClient = MemoryMetricExporterFactory::create($this->config);
+        $this->statsdExporterClient = new MemoryStatsdExporterClient("unittest");
     }
 
 

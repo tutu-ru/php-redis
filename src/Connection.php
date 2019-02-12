@@ -117,7 +117,7 @@ class Connection
     {
         try {
             $this->getPredisClient(false)->disconnect();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new DisconnectException($e->getMessage(), $e->getCode(), $e);
         }
     }

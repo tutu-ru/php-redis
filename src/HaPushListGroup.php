@@ -3,17 +3,17 @@ declare(strict_types=1);
 
 namespace TutuRu\Redis;
 
-use TutuRu\Metrics\MetricAwareInterface;
-use TutuRu\Metrics\MetricAwareTrait;
+use TutuRu\Metrics\StatsdExporterAwareInterface;
+use TutuRu\Metrics\StatsdExporterAwareTrait;
 use TutuRu\Redis\Exceptions\DisconnectException;
 use TutuRu\Redis\Exceptions\NoAvailableConnectionsException;
 use TutuRu\Redis\Exceptions\RedisException;
 use TutuRu\Redis\MetricsCollector\PushMetricCollector;
 use TutuRu\Redis\MetricsCollector\ReconnectMetricCollector;
 
-class HaPushListGroup implements RedisPushListInterface, MetricAwareInterface
+class HaPushListGroup implements RedisPushListInterface, StatsdExporterAwareInterface
 {
-    use MetricAwareTrait;
+    use StatsdExporterAwareTrait;
 
     /** @var ConnectionManager */
     private $connectionManager;
