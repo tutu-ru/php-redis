@@ -7,7 +7,7 @@
   "prefer-stable": true,
   "require": {
     "tutu-ru/lib-config": "^2.0",
-    "tutu-ru/lib-metrics": "^2.0",
+    "tutu-ru/lib-metrics": "^3.0.1",
     "predis/predis": "v1.0.1",
     "php": "^7.1",
     "ext-mbstring": "*"
