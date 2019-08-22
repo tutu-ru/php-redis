@@ -11,10 +11,10 @@ use TutuRu\Redis\Exceptions\ConnectionConfigException;
 class ConnectionManager
 {
     /** @var ConnectionConfig[] */
-    private $connectionsConfigs = [];
+    protected $connectionsConfigs = [];
 
     /** @var Connection[] */
-    private $connections = [];
+    protected $connections = [];
 
     /** @var ConfigInterface */
     private $config;
@@ -59,7 +59,7 @@ class ConnectionManager
     }
 
 
-    private function connect(string $connectionName)
+    protected function connect(string $connectionName)
     {
         return new Connection($this->getConnectionConfig($connectionName));
     }
@@ -104,7 +104,7 @@ class ConnectionManager
     }
 
 
-    private function getConnectionConfig(string $connectionName): ConnectionConfig
+    protected function getConnectionConfig(string $connectionName): ConnectionConfig
     {
         if (!array_key_exists($connectionName, $this->connectionsConfigs)) {
             throw new ConnectionConfigException("Undefined connection name: " . $connectionName);
